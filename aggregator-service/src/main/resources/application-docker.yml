@@ -1,0 +1,10 @@
+server:
+  port: 8081
+stores:
+  jumbo:
+    url: http://jumbo:8091
+spring:
+  data:
+    redis:
+      host: redis
+      port: 6379

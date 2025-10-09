@@ -1,0 +1,38 @@
+#spring.application.name=api-gateway
+server:
+  port: 8080
+
+spring:
+  cloud:
+    gateway:
+      routes:
+        # Why: route compare API to aggregator-service
+        - id: aggregator
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/v1/compare/**
+          filters:
+            - StripPrefix=2
+
+        # Why: route store services for direct test
+        - id: store-jumbo
+          uri: http://localhost:8091
+          predicates:
+            - Path=/api/v1/stores/jumbo/**
+          filters:
+            - StripPrefix=3
+
+        - id: store-ah
+          uri: http://localhost:8092
+          predicates:
+            - Path=/api/v1/stores/ah/**
+          filters:
+            - StripPrefix=3
+
+        # Add more stores here as you run them
+        - id: store-lidl
+          uri: http://localhost:8093
+          predicates:
+            - Path=/api/v1/stores/lidl/**
+          filters:
+            - StripPrefix=3

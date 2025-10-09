@@ -1,0 +1,3 @@
+#spring.application.name=store-aldi-service
+server:
+  port: 8093

@@ -1,0 +1,30 @@
+version: "3.9"
+services:
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+  gateway:
+    build: ./api-gateway
+    ports:
+      - "8080:8080"
+    depends_on: [aggregator, jumbo, ah, lidl]
+  aggregator:
+    build: ./aggregator-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_REDIS_HOST=redis
+    depends_on: [redis]
+  jumbo:
+    build: ./store-jumbo-service
+    ports:
+      - "8091:8091"
+  ah:
+    build: ./store-ah-service
+    ports:
+      - "8092:8092"
+  lidl:
+    build: ./store-lidl-service
+    ports:
+      - "8093:8093"

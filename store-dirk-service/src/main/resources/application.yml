@@ -1,0 +1,3 @@
+#spring.application.name=store-dirk-service
+server:
+  port: 8094

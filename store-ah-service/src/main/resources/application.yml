@@ -1,0 +1,3 @@
+#spring.application.name=store-ah-service
+server:
+  port: 8092
