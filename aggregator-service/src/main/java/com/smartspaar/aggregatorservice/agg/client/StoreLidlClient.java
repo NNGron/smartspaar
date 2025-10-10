@@ -9,7 +9,11 @@ import org.springframework.web.bind.annotation.RequestParam;
  * Call Lidl store.
  * Return search result.
  */
-@FeignClient(name = "storeLidl", url = "${stores.lidl.url}")
+@FeignClient(
+        name = "store-lidl",              // unique bean name
+        contextId = "storeLidlClient",    // unique context id
+        url = "${stores.lidl.url}"
+)
 public interface StoreLidlClient {
     /** Search products by query. */
     @GetMapping("/v1/search")

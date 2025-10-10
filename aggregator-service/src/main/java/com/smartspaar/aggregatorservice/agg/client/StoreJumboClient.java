@@ -9,7 +9,11 @@ import org.springframework.web.bind.annotation.RequestParam;
  * Call Jumbo store.
  * Return search result.
  */
-@FeignClient(name = "storeJumbo", url = "${stores.jumbo.url}")
+@FeignClient(
+        name = "store-jumbo",              // unique bean name
+        contextId = "storeJumboClient",    // unique context id
+        url = "${stores.jumbo.url}"
+)
 public interface StoreJumboClient {
     /** Search products by query. */
     @GetMapping("/v1/search")

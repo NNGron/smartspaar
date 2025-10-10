@@ -1,3 +1,14 @@
 #spring.application.name=store-plus-service
 server:
   port: 8096
+
+spring:
+  application:
+    name: store-plus-service
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
