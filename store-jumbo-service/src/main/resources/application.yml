@@ -1,3 +1,14 @@
 #spring.application.name=store-jumbo-service
 server:
   port: 8091
+
+spring:
+  application:
+    name: store-Jumbo-service
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html

@@ -9,7 +9,11 @@ import org.springframework.web.bind.annotation.RequestParam;
  * Call AH store.
  * Return search result.
  */
-@FeignClient(name = "storeAh", url = "${stores.ah.url}")
+@FeignClient(
+        name = "store-ah",               // unique bean name
+        contextId = "storeAhClient",     // unique context id
+        url = "${stores.ah.url}"
+)
 public interface StoreAhClient {
     /** Search products by query. */
     @GetMapping("/v1/search")
