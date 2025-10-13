@@ -4,6 +4,8 @@
     <file url="file://$PROJECT_DIR$/aggregator-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/api-gateway/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/common-model/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/list-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/price-catalog-service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/store-ah-service/src/main/java" charset="UTF-8" />

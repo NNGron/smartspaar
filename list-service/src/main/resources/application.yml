@@ -1,0 +1,16 @@
+#spring.application.name=list-service
+spring:
+  application:
+    name: list-service
+
+server:
+  port: 8096
+
+aggregator:
+  url: http://localhost:8081
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html

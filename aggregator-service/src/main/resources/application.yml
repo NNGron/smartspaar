@@ -18,6 +18,9 @@ stores:
   lidl:
     url: http://localhost:8093
 
+catalog:
+  url: http://localhost:8095
+
 springdoc:
   api-docs:
     path: /v3/api-docs

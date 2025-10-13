@@ -37,17 +37,32 @@
     </dependencyManagement>
 
     <modules>
+        <!-- Shared DTO models used by all services.-->
         <module>common-model</module>
+        <!--One entry point; routes requests to other services.-->
         <module>api-gateway</module>
+        <!--Calls store services, merges results, and caches them.-->
         <module>aggregator-service</module>
+        <!--Gets products and prices from Jumbo.-->
         <module>store-jumbo-service</module>
+        <!--Gets products and prices from Albert Heijn (AH).-->
         <module>store-ah-service</module>
+        <!--Gets products and prices from PLUS-->
         <module>store-plus-service</module>
+        <!--Gets products and prices from Dirk.-->
         <module>store-dirk-service</module>
+        <!--Gets products and prices from Vomar.-->
         <module>store-vomar-service</module>
+        <!--Gets products and prices from SPAR.-->
         <module>store-spar-service</module>
+        <!--Gets products and prices from ALDI.-->
         <module>store-aldi-service</module>
+        <!--Gets products and prices from Lidl.-->
         <module>store-lidl-service</module>
+        <!--Saves and reads prices in PostgreSQL.-->
+        <module>price-catalog-service</module>
+        <!--Receives list items and starts background price fetch.-->
+        <module>list-service</module>
     </modules>
 
     <build>

@@ -1,0 +1,25 @@
+#spring.application.name=price-catalog-service
+spring:
+  application:
+    name: price-catalog-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/smartspaar
+    username: Maktab
+    password: Maktab123
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  flyway:
+    enabled: false  # Flyway (موقتا) غیرفعال
+    locations: classpath:db/migration
+
+server:
+  port: 8095
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
