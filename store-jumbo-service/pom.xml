@@ -20,17 +20,11 @@
             <artifactId>jsoup</artifactId>
             <version>1.17.2</version>
         </dependency>
-<!--        &lt;!&ndash; Why: Common DTOs &ndash;&gt;-->
-<!--        <dependency>-->
-<!--            <groupId>com.smartspaar</groupId>-->
-<!--            <artifactId>common-model</artifactId>-->
-<!--            <version>0.0.1-SNAPSHOT</version>-->
-<!--        </dependency>-->
-        <!-- keep only ONE of these; use parent version -->
+        <!-- Why: Common DTOs -->
         <dependency>
             <groupId>com.smartspaar</groupId>
             <artifactId>common-model</artifactId>
-            <version>${project.version}</version>
+            <version>0.0.1-SNAPSHOT</version>
         </dependency>
         <!-- Why: unit test (JUnit 5 + Spring Boot Test) -->
         <dependency>
@@ -38,19 +32,11 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-
         <!-- Why: Swagger UI for REST testing (WebMVC) -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.6.0</version>
-        </dependency>
-
-        <!-- Why: use shared DTOs (SearchResponse, ProductDto) -->
-        <dependency>
-            <groupId>com.smartspaar</groupId>
-            <artifactId>common-model</artifactId>
-            <version>${project.version}</version>
         </dependency>
     </dependencies>
 </project>
