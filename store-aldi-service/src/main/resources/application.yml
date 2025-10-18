@@ -1,6 +1,6 @@
 #spring.application.name=store-aldi-service
 server:
-  port: 8093
+  port: 8083
 
 spring:
   application:

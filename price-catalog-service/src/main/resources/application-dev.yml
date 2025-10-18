@@ -1,0 +1,39 @@
+#spring.application.name=price-catalog-service
+
+# use for Unit Tests and How to active H2:
+# IntelliJ --> Run configurations --> configuration --> edit --> Active profiles --> dev
+
+server:
+  port: 8095
+
+spring:
+  application:
+    name: price-catalog-service
+  datasource:
+    # Why: Use H2 in-memory DB for quick tests
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL  # H2 memory DB, PostgreSQL mode
+    driver-class-name: org.h2.Driver
+    username: sa                            # Default user for H2
+    password: ""                          # Default password for H2
+
+  jpa:
+    hibernate:
+      # Why: Auto create/update schema for dev/test
+      ddl-auto: create-drop  # یا update
+    show-sql: true           # Show SQL queries in console
+
+  h2:
+    console:
+      enabled: true          # Enable H2 console access
+      path: /h2-console      # Path to access console (e.g., http://localhost:8095/h2-console)
+
+  flyway:
+    enabled: false           # Disable Flyway for now
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+

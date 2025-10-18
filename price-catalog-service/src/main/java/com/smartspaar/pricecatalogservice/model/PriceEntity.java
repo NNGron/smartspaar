@@ -1,7 +1,6 @@
 package com.smartspaar.pricecatalogservice.model;
 
 import jakarta.persistence.*;
-import jdk.jfr.DataAmount;
 
 import java.time.Instant;
 

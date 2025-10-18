@@ -1,6 +1,6 @@
 #spring.application.name=store-plus-service
 server:
-  port: 8096
+  port: 8099
 
 spring:
   application:

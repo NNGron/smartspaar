@@ -1,9 +1,16 @@
 #spring.application.name=price-catalog-service
+
+# use for End-to-End tests and How to deactivate H2:
+# IntelliJ --> Run configurations --> configuration --> edit --> Active profiles --> delete: dev
+
+server:
+  port: 8095
+
 spring:
   application:
     name: price-catalog-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/smartspaar
+    url: jdbc:postgresql://localhost:5432/pricecatalogservice
     username: Maktab
     password: Maktab123
   jpa:
@@ -13,9 +20,6 @@ spring:
   flyway:
     enabled: false  # Flyway (موقتا) غیرفعال
     locations: classpath:db/migration
-
-server:
-  port: 8095
 
 springdoc:
   api-docs:
