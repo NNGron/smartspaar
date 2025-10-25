@@ -1,0 +1,47 @@
+{
+  "__comment": "Grafana dashboard for SmartSpaar infrastructure",
+  "dashboard": {
+    "id": null,
+    "uid": null,
+    "title": "SmartSpaar Monitoring",
+    "tags": ["smartspaar", "infra"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "type": "graph",
+        "title": "Prometheus - Scrape Duration",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "scrape_duration_seconds",
+            "legendFormat": "{{instance}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 }
+      },
+      {
+        "type": "graph",
+        "title": "Redis - Memory Usage",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "redis_memory_used_bytes",
+            "legendFormat": "{{instance}}",
+            "refId": "B"
+          }
+        ],
+        "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 }
+      }
+    ],
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": []
+    }
+  }
+}

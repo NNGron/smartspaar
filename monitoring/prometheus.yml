@@ -1,0 +1,42 @@
+# prometheus.yml
+# Configuration file for Prometheus monitoring system in SmartSpaar infrastructure
+# This file defines scraping intervals and targets for collecting metrics
+
+global:
+  # scrape_interval: مدت زمان بین هر بار جمع‌آوری متریک‌ها
+  scrape_interval: 15s
+
+  # evaluation_interval: مدت زمان بین هر بار ارزیابی ruleها (در صورت وجود)
+  evaluation_interval: 15s
+
+  # scrape_timeout: حداکثر زمان مجاز برای دریافت متریک از هر سرویس
+  scrape_timeout: 10s
+
+# scrape_configs: لیست سرویس‌هایی که باید مانیتور بشن
+scrape_configs:
+
+  # مانیتور کردن خود Prometheus
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # مانیتور کردن Redis (در صورت فعال بودن exporter)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['smartspaar-redis-exporter:9121']
+
+  # مانیتور کردن PostgreSQL (در صورت فعال بودن exporter)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: [ 'smartspaar-postgres-exporter:9187' ]
+
+  # مانیتور کردن Kafka (در صورت فعال بودن exporter)
+  - job_name: 'kafka'
+    static_configs:
+      - targets: [ 'smartspaar-kafka-exporter:9308' ]
+
+#  # مانیتور کردن سرویس‌های جاوا (در صورت فعال بودن actuator/prometheus endpoint)
+#  - job_name: 'java-services'
+#    metrics_path: '/actuator/prometheus'
+#    static_configs:
+#      - targets: ['list-service:8080', 'aggregator-service:8081'] # مثال

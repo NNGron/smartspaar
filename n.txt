@@ -1,0 +1,278 @@
+                         ┌─────────────────────────────┐
+                         │        Frontend App         │
+                         │  (Flutter / React / Web)    │
+                         └────────────┬────────────────┘
+                                      │
+                                      ▼
+                         ┌─────────────────────────────┐
+                         │      API Gateway (Spring)    │
+                         │  Routing / Auth / RateLimit  │
+                         └────────────┬────────────────┘
+                                      │
+        ┌────────────────────────────┼────────────────────────────┐
+        │                            │                            │
+        ▼                            ▼                            ▼
+
+┌────────────────┐       ┌────────────────────┐       ┌────────────────────┐
+│ list-service   │       │ aggregator-service │       │ group-service      │
+│ مدیریت لیست‌ها │       │ جمع‌آوری و مقایسه قیمت‌ها │       │ ساخت گروه و اعضا     │
+└────────────────┘       └────────────────────┘       └────────────────────┘
+        │                            │                            │
+        ▼                            ▼                            ▼
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│                            store-services                                  │
+│   هر فروشگاه یک سرویس مستقل دارد که با Jsoup یا API قیمت‌ها را می‌کشد     │
+│                                                                            │
+│ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ │
+│ │ jumbo      │ │ lidl       │ │ aldi       │ │ plus       │ │ dirk       │ │
+│ └────────────┘ └────────────┘ └────────────┘ └────────────┘ └────────────┘ │
+└────────────────────────────────────────────────────────────────────────────┘
+
+        ▼
+┌─────────────────────────────┐
+│ Redis / PostgreSQL / Kafka │
+│ ذخیره‌سازی، کش، async jobs │
+└─────────────────────────────┘
+
+20-oct-2025:
+
+smartspaar/                         ← پروژه پرنت (Parent Project) - Maven ساده
+├── pom.xml                         ← مدیریت وابستگی‌ها، نسخه‌ها، و ماژول‌ها
+├── src/
+├── aggregator-service/             ← سرویس Spring Boot برای جمع‌آوری و مقایسه قیمت‌ها
+│   ├── pom.xml
+│   └── src/
+│       ├── main/
+│       │   ├── java/
+│       │   │   └── com.smartspaar.aggregatorservice.agg/
+│       │   │       ├── client/
+│       │   │       │   ├── interface PriceCatalogClient
+│       │   │       │   ├── interface StoreAhClient
+│       │   │       │   ├── interface StoreJumboClient
+│       │   │       │   └── interface StoreLidlClient
+│       │   │       ├── config/
+│       │   │       │   ├── OpenApiConfig.java
+│       │   │       │   ├── RedisConfig.java
+│       │   │       │   └── SwaggerLinksLogger.java
+│       │   │       ├── web/
+│       │   │       │   ├── CompareController.java
+│       │   │       │   └── FetchController.java
+│       │   │       └── AggregatorServiceApplication.java
+│       │   └── resources/
+│       │       └── application.yml
+│       └── target/
+│
+├── api-gateway/          ← ✅ Spring Boot - درگاه ورودی مرکزی برای همه سرویس‌ها
+│   ├── pom.xml
+│   └── src/
+│       ├── main/
+│       │   ├── java/
+│       │   │   └── com.smartspaar.apigateway/
+│       │   │       ├── config/
+│       │   │       │   ├── OpenApiConfig.java
+│       │   │       │   └── SwaggerLinksLogger.java
+│       │   │       └── AggregatorServiceApplication.java
+│       │   └── resources/
+│       │       └── application.yml
+│       └── target/
+│
+├── common-model/                   ← ماژول مدل‌های مشترک (Jar بدون Spring Boot)
+│   ├── pom.xml
+│   └── src/
+│       └── main/
+│           └── java/
+│               └── com.smartspaar.model/
+│                   ├── record ProductDto
+│                   ├── record PriceBulkRequest
+│                   └── record SearchResponse
+│
+├── list-service/         ← ✅ Spring Boot - سرویس مدیریت لیست خرید
+│   ├── pom.xml
+│   └── src/
+│       ├── main/
+│       │   ├── java/
+│       │   │   └── com.smartspaar.listservice/
+│       │   │       ├── client/
+│       │   │       │   ├── interface AggregatorClient
+│       │   │       ├── config/
+│       │   │       │   ├── OpenApiConfig.java
+│       │   │       │   └── SwaggerLinksLogger.java
+│       │   │       ├── service/
+│       │   │       │   ├── BackgroundFetchService.java
+│       │   │       ├── web/
+│       │   │       │   └── ListController.java
+│       │   │       └── ListServiceApplication.java
+│       │   └── resources/
+│       │       └── application.yml
+│       └── target/
+│
+├── price-catalog-service/ ← ✅ Spring Boot - سرویس ذخیره‌سازی و کش قیمت‌ها
+│   ├── pom.xml
+│   └── src/
+│       ├── main/
+│       │   ├── java/
+│       │   │   └── com.smartspaar.pricecatalogservice/
+│       │   │       ├── config/
+│       │   │       │   ├── OpenApiConfig.java
+│       │   │       │   └── SwaggerLinksLogger.java
+│       │   │       ├── model/
+│       │   │       │   ├── PriceEntity.java
+│       │   │       ├── repository/
+│       │   │       │   ├── interface PriceRepository
+│       │   │       ├── service/
+│       │   │       │   ├── PriceCatalogService.java
+│       │   │       ├── web/
+│       │   │       │   └── PriceCatalogController.java
+│       │   │       └── PriceCatalogServiceApplication.java
+│       │   └── resources/
+│       │       ├── db.migration/
+│       │           └── application.yml
+│       │           └── application-dev.yml
+│       └── target/
+│
+├── store-ah-service/     ← ✅ Spring Boot - سرویس فروشگاه AH
+│   ├── pom.xml
+│   └── src/
+│       ├── main/
+│       │   ├── java/
+│       │   │   └── com.smartspaar.storeahservice/
+│       │   │       ├── config/
+│       │   │       │   ├── OpenApiConfig.java
+│       │   │       │   └── SwaggerLinksLogger.java
+│       │   │       ├── service/
+│       │   │       │   ├── AhScrapeService.java
+│       │   │       ├── web/
+│       │   │       │   └── AhController.java
+│       │   │       └── StoreAhServiceApplication.java
+│       │   └── resources/
+│       │       └── application.yml
+│       └── target/
+│
+├── store-aldi-service/   ← ✅ Spring Boot - سرویس فروشگاه Aldi
+│   ├── pom.xml
+│   └── src/
+│       ├── main/
+│       │   ├── java/
+│       │   │   └── com.smartspaar.storealdiervice/
+│       │   │       ├── config/
+│       │   │       │   ├── OpenApiConfig.java
+│       │   │       │   └── SwaggerLinksLogger.java
+│       │   │       └── StoreAldiServiceApplication.java
+│       │   └── resources/
+│       │       └── application.yml
+│       └── target/
+│
+├── store-dirk-service/   ← ✅ Spring Boot - سرویس فروشگاه Dirk
+│   ├── pom.xml
+│   └── src/
+│       ├── main/
+│       │   ├── java/
+│       │   │   └── com.smartspaar.storedirkervice/
+│       │   │       ├── config/
+│       │   │       │   ├── OpenApiConfig.java
+│       │   │       │   └── SwaggerLinksLogger.java
+│       │   │       └── StoreDirkServiceApplication.java
+│       │   └── resources/
+│       │       └── application.yml
+│       └── target/
+│
+│
+├── store-jumbo-service/  ← ✅ Spring Boot - سرویس فروشگاه Jumbo
+│   ├── pom.xml
+│   └── src/
+│       ├── main/
+│       │   ├── java/
+│       │   │   └── com.smartspaar.storejumboservice/
+│       │   │       ├── config/
+│       │   │       │   ├── OpenApiConfig.java
+│       │   │       │   └── SwaggerLinksLogger.java
+│       │   │       ├── service/
+│       │   │       │   ├── JumboScrapeService.java
+│       │   │       ├── web/
+│       │   │       │   └── SearchController.java
+│       │   │       └── StoreJumboApplication.java
+│       │   │       └── StoreJumboServiceApplication.java
+│       │   └── resources/
+│       │       └── application.yml
+│       └── target/
+│
+├── store-lidl-service/   ← ✅ Spring Boot - سرویس فروشگاه Lidl
+│   ├── pom.xml
+│   └── src/
+│       ├── main/
+│       │   ├── java/
+│       │   │   └── com.smartspaar.storelidlservice/
+│       │   │       ├── config/
+│       │   │       │   ├── OpenApiConfig.java
+│       │   │       │   └── SwaggerLinksLogger.java
+│       │   │       └── StoreLidlServiceApplication.java
+│       │   └── resources/
+│       │       └── application.yml
+│       └── target/
+│
+├── store-plus-service/   ← ✅ Spring Boot - سرویس فروشگاه Plus
+│   ├── pom.xml
+│   └── src/
+│       ├── main/
+│       │   ├── java/
+│       │   │   └── com.smartspaar.storeplusservice/
+│       │   │       ├── config/
+│       │   │       │   ├── OpenApiConfig.java
+│       │   │       │   └── SwaggerLinksLogger.java
+│       │   │       └── StorePlusServiceApplication.java
+│       │   └── resources/
+│       │       └── application.yml
+│       └── target/
+│
+├── store-spar-service/   ← ✅ Spring Boot - سرویس فروشگاه Spar
+│   ├── pom.xml
+│   └── src/
+│       ├── main/
+│       │   ├── java/
+│       │   │   └── com.smartspaar.storesparservice/
+│       │   │       ├── config/
+│       │   │       │   ├── OpenApiConfig.java
+│       │   │       │   └── SwaggerLinksLogger.java
+│       │   │       └── StoreSparServiceApplication.java
+│       │   └── resources/
+│       │       └── application.yml
+│       └── target/
+│
+├── store-vomar-service/  ← ✅ Spring Boot - سرویس فروشگاه Vomar
+│   ├── pom.xml
+│   └── src/
+│       ├── main/
+│       │   ├── java/
+│       │   │   └── com.smartspaar.storevomarservice/
+│       │   │       ├── config/
+│       │   │       │   ├── OpenApiConfig.java
+│       │   │       │   └── SwaggerLinksLogger.java
+│       │   │       └── StoreVomarServiceApplication.java
+│       │   └── resources/
+│       │       └── application.yml
+│       └── target/
+│
+├── docker-compose.yml    ← ✅ زیرساخت اجرا
+
+
+Infrastructure
+    ├── RedisCacheService
+    ├── H2
+    ├── sweger
+    ├── PostgreSQL (via Spring Data JPA)
+    ├── Kafka (for async jobs)
+
+🧩 اجزای سناریو به زبان ساده
+مرحله	توضیح
+1. ثبت‌نام و ورود	کاربر ثبت‌نام می‌کنه و وارد حساب خودش می‌شه
+2. ساخت گروه	کاربر می‌تونه گروه خرید بسازه و اعضا رو دعوت کنه
+3. ساخت لیست خرید	اعضای گروه لیست خرید مشترک می‌سازن
+4. جمع‌آوری قیمت	سیستم از فروشگاه‌های مختلف قیمت‌ها رو جمع می‌کنه (scraping یا API)
+5. مقایسه قیمت‌ها	قیمت‌ها مقایسه می‌شن و فروشگاه‌های مناسب پیشنهاد داده می‌شن
+6. پیش‌بینی صرفه‌جویی	سیستم تخمین می‌زنه چقدر صرفه‌جویی می‌شه
+7. مسیر بهینه	مسیر مناسب برای خرید از چند فروشگاه پیشنهاد داده می‌شه
+8. اسکن کارت تخفیف	کاربر می‌تونه کارت‌های تخفیف رو اسکن کنه و سیستم اون‌ها رو اعمال کنه
+9. هماهنگی گروهی	اعضای گروه می‌تونن زمان خرید رو هماهنگ کنن
+10. گزارش صرفه‌جویی	گزارش نهایی از صرفه‌جویی‌ها و خریدها نمایش داده می‌شه
+11. پیشنهادهای هوشمند	سیستم پیشنهادهای شخصی‌سازی‌شده برای خریدهای آینده می‌ده

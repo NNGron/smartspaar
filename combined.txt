@@ -1,0 +1,2188 @@
+=== ./list-service/src/test/java/com/smartspaar/listservice/ListServiceApplicationTests.java ===
+//package com.smartspaar.listservice;
+//
+//import org.junit.jupiter.api.Test;
+//import org.springframework.boot.test.context.SpringBootTest;
+//
+//@SpringBootTest
+//class ListServiceApplicationTests {
+//
+//    @Test
+//    void contextLoads() {
+//    }
+//
+//}
+=== ./list-service/src/main/java/com/smartspaar/listservice/config/OpenApiConfig.java ===
+package com.smartspaar.listservice.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * OpenAPI config.
+ * Set title and version.
+ */
+@Configuration
+public class OpenApiConfig {
+    /**
+     * Build OpenAPI info.
+     * @return OpenAPI bean
+     */
+    @Bean
+    public OpenAPI api() {
+        return new OpenAPI()
+                .info(new Info().title("List service API").version("v1")
+                        .description(""));
+    }
+}=== ./list-service/src/main/java/com/smartspaar/listservice/config/SwaggerLinksLogger.java ===
+package com.smartspaar.listservice.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+
+/**
+ * Print Swagger links on startup.
+ * It also prints app name.
+ */
+@Component
+public class SwaggerLinksLogger {
+
+    /** App name from config. */
+    @Value("${spring.application.name:app}")
+    private String appName;
+
+    /** HTTP port. */
+    @Value("${server.port:8080}")
+    private int port;
+
+    /** Context path (optional). */
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
+
+    /** Swagger UI path. */
+    @Value("${springdoc.swagger-ui.path:/swagger-ui.html}")
+    private String swaggerUiPath;
+
+    /** OpenAPI docs path. */
+    @Value("${springdoc.api-docs.path:/v3/api-docs}")
+    private String apiDocsPath;
+
+    /**
+     * Print links when app is ready.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void printLinks() {
+        String base = "http://localhost:" + port + (contextPath == null ? "" : contextPath);
+        System.out.println("\n==== Swagger (" + appName + ") ====");
+        System.out.println("UI : " + base + swaggerUiPath);
+        System.out.println("API: " + base + apiDocsPath + "\n");
+    }
+}=== ./list-service/src/main/java/com/smartspaar/listservice/web/ListController.java ===
+package com.smartspaar.listservice.web;
+
+import com.smartspaar.listservice.service.BackgroundFetchService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.web.bind.annotation.*;
+
+/**
+ * List controller.
+ * It triggers price fetch when user adds item.
+ */
+@Tag(name = "Lists", description = "Manage lists and trigger fetch")
+@RestController
+@RequestMapping("/v1/lists")
+public class ListController {
+
+    private final BackgroundFetchService bg;
+
+    public ListController(BackgroundFetchService bg) {
+        this.bg = bg;
+    }
+
+    /**
+     * Add item and start fetch.
+     * @param id list id
+     * @param name item name
+     * @return simple message
+     */
+    @Operation(summary = "Add item and start fetch", description = "When item added, start background fetch")
+    @PostMapping("/{id}/items")
+    public String addItem(@PathVariable String id, @RequestParam String name) {
+        // TODO: map "تخم مرغ" to "eieren" if needed
+        String query = name;
+        bg.startFetch(query);
+        return "fetch started for query=" + query;
+    }
+}=== ./list-service/src/main/java/com/smartspaar/listservice/ListServiceApplication.java ===
+package com.smartspaar.listservice;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+import org.springframework.scheduling.annotation.EnableAsync;
+
+/**
+ * List service app.
+ * It triggers background fetch.
+ */
+@SpringBootApplication
+@EnableFeignClients(basePackages = "com.smartspaar.listservice.client")
+@EnableAsync
+public class ListServiceApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(ListServiceApplication.class, args);
+    }
+}=== ./list-service/src/main/java/com/smartspaar/listservice/service/BackgroundFetchService.java ===
+package com.smartspaar.listservice.service;
+
+import com.smartspaar.listservice.client.AggregatorClient;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+
+/**
+ * Background fetch.
+ * It calls aggregator in background.
+ */
+@Service
+public class BackgroundFetchService {
+
+    private final AggregatorClient agg;
+
+    public BackgroundFetchService(AggregatorClient agg) {
+        this.agg = agg;
+    }
+
+    /**
+     * Start fetch.
+     * @param query search text
+     */
+    @Async
+    public void startFetch(String query) {
+        try {
+            agg.fetch(query);
+        } catch (Exception ignored) {
+            // log error if needed
+        }
+    }
+}=== ./list-service/src/main/java/com/smartspaar/listservice/client/AggregatorClient.java ===
+package com.smartspaar.listservice.client;
+
+import com.smartspaar.model.SearchResponse;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.*;
+
+/**
+ * Call aggregator fetch API.
+ * It starts background fetch.
+ */
+@FeignClient(name = "aggregator", url = "${aggregator.url}")
+public interface AggregatorClient {
+    /** Call fetch endpoint. */
+    @PostMapping("/v1/fetch")
+    SearchResponse fetch(@RequestParam String query);
+}=== ./store-lidl-service/src/test/java/com/smartspaar/storelidlservice/StoreLidlServiceApplicationTests.java ===
+package com.smartspaar.storelidlservice;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class StoreLidlServiceApplicationTests {
+
+    @Test
+    void contextLoads() {
+    }
+
+}
+=== ./store-lidl-service/src/main/java/com/smartspaar/storelidlservice/config/OpenApiConfig.java ===
+package com.smartspaar.storelidlservice.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * OpenAPI config.
+ * Sets title and version.
+ */
+@Configuration
+public class OpenApiConfig {
+
+    /**
+     * Build OpenAPI info.
+     * @return OpenAPI bean
+     */
+    @Bean
+    public OpenAPI apiInfo() {
+        return new OpenAPI().info(
+                new Info()
+                        .title("Store Lidl Service API")
+                        .version("v1")
+                        .description("Search products in Lidl. Get name, brand, quantity, prices. Query example: 'eieren'.")
+        );
+    }
+}=== ./store-lidl-service/src/main/java/com/smartspaar/storelidlservice/config/SwaggerLinksLogger.java ===
+package com.smartspaar.storelidlservice.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+
+/**
+ * Print Swagger links on startup.
+ * It also prints app name.
+ */
+@Component
+public class SwaggerLinksLogger {
+
+    /** App name from config. */
+    @Value("${spring.application.name:app}")
+    private String appName;
+
+    /** HTTP port. */
+    @Value("${server.port:8080}")
+    private int port;
+
+    /** Context path (optional). */
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
+
+    /** Swagger UI path. */
+    @Value("${springdoc.swagger-ui.path:/swagger-ui.html}")
+    private String swaggerUiPath;
+
+    /** OpenAPI docs path. */
+    @Value("${springdoc.api-docs.path:/v3/api-docs}")
+    private String apiDocsPath;
+
+    /**
+     * Print links when app is ready.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void printLinks() {
+        String base = "http://localhost:" + port + (contextPath == null ? "" : contextPath);
+        System.out.println("\n==== Swagger (" + appName + ") ====");
+        System.out.println("UI : " + base + swaggerUiPath);
+        System.out.println("API: " + base + apiDocsPath + "\n");
+    }
+}=== ./store-lidl-service/src/main/java/com/smartspaar/storelidlservice/StoreLidlServiceApplication.java ===
+package com.smartspaar.storelidlservice;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class StoreLidlServiceApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(StoreLidlServiceApplication.class, args);
+    }
+
+}
+=== ./store-aldi-service/src/test/java/com/smartspaar/storealdiservice/StoreAldiServiceApplicationTests.java ===
+package com.smartspaar.storealdiservice;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class StoreAldiServiceApplicationTests {
+
+	@Test
+	void contextLoads() {
+	}
+
+}
+=== ./store-aldi-service/src/main/java/com/smartspaar/storealdiservice/config/OpenApiConfig.java ===
+package com.smartspaar.storealdiservice.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * OpenAPI config.
+ * Sets title and version.
+ */
+@Configuration
+public class OpenApiConfig {
+
+    /**
+     * Build OpenAPI info.
+     * @return OpenAPI bean
+     */
+    @Bean
+    public OpenAPI apiInfo() {
+        return new OpenAPI().info(
+                new Info()
+                        .title("Store Aldi Service API")
+                        .version("v1")
+                        .description("Search products in Aldi. Get name, brand, quantity, prices. Query example: 'eieren'.")
+        );
+    }
+}=== ./store-aldi-service/src/main/java/com/smartspaar/storealdiservice/config/SwaggerLinksLogger.java ===
+package com.smartspaar.storealdiservice.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+
+/**
+ * Print Swagger links on startup.
+ * It also prints app name.
+ */
+@Component
+public class SwaggerLinksLogger {
+
+    /** App name from config. */
+    @Value("${spring.application.name:app}")
+    private String appName;
+
+    /** HTTP port. */
+    @Value("${server.port:8080}")
+    private int port;
+
+    /** Context path (optional). */
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
+
+    /** Swagger UI path. */
+    @Value("${springdoc.swagger-ui.path:/swagger-ui.html}")
+    private String swaggerUiPath;
+
+    /** OpenAPI docs path. */
+    @Value("${springdoc.api-docs.path:/v3/api-docs}")
+    private String apiDocsPath;
+
+    /**
+     * Print links when app is ready.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void printLinks() {
+        String base = "http://localhost:" + port + (contextPath == null ? "" : contextPath);
+        System.out.println("\n==== Swagger (" + appName + ") ====");
+        System.out.println("UI : " + base + swaggerUiPath);
+        System.out.println("API: " + base + apiDocsPath + "\n");
+    }
+}=== ./store-aldi-service/src/main/java/com/smartspaar/storealdiservice/StoreAldiServiceApplication.java ===
+package com.smartspaar.storealdiservice;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class StoreAldiServiceApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(StoreAldiServiceApplication.class, args);
+	}
+
+}
+=== ./store-jumbo-service/src/test/java/com/smartspaar/store/jumbo/StoreJumboServiceApplicationTests.java ===
+package com.smartspaar.store.jumbo;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class StoreJumboServiceApplicationTests {
+
+    @Test
+    void contextLoads() {
+    }
+
+}
+=== ./store-jumbo-service/src/main/java/com/smartspaar/store/jumbo/StoreJumboServiceApplication.java ===
+package com.smartspaar.store.jumbo;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class StoreJumboServiceApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(StoreJumboServiceApplication.class, args);
+    }
+
+}
+=== ./store-jumbo-service/src/main/java/com/smartspaar/store/jumbo/config/OpenApiConfig.java ===
+package com.smartspaar.store.jumbo.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * OpenAPI config.
+ * Sets title and version.
+ */
+@Configuration
+public class OpenApiConfig {
+
+    /**
+     * Build OpenAPI info.
+     * @return OpenAPI bean
+     */
+    @Bean
+    public OpenAPI apiInfo() {
+        return new OpenAPI().info(
+                new Info()
+                        .title("Store Jumbo Service API")
+                        .version("v1")
+                        .description("Search products in Jumbo. Get name, brand, quantity, prices. Query example: 'eieren'.")
+        );
+    }
+}=== ./store-jumbo-service/src/main/java/com/smartspaar/store/jumbo/config/SwaggerLinksLogger.java ===
+package com.smartspaar.store.jumbo.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+
+/**
+ * Print Swagger links on startup.
+ * It also prints app name.
+ */
+@Component
+public class SwaggerLinksLogger {
+
+    /** App name from config. */
+    @Value("${spring.application.name:app}")
+    private String appName;
+
+    /** HTTP port. */
+    @Value("${server.port:8080}")
+    private int port;
+
+    /** Context path (optional). */
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
+
+    /** Swagger UI path. */
+    @Value("${springdoc.swagger-ui.path:/swagger-ui.html}")
+    private String swaggerUiPath;
+
+    /** OpenAPI docs path. */
+    @Value("${springdoc.api-docs.path:/v3/api-docs}")
+    private String apiDocsPath;
+
+    /**
+     * Print links when app is ready.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void printLinks() {
+        String base = "http://localhost:" + port + (contextPath == null ? "" : contextPath);
+        System.out.println("\n==== Swagger (" + appName + ") ====");
+        System.out.println("UI : " + base + swaggerUiPath);
+        System.out.println("API: " + base + apiDocsPath + "\n");
+    }
+}=== ./store-jumbo-service/src/main/java/com/smartspaar/store/jumbo/web/SearchController.java ===
+package com.smartspaar.store.jumbo.web;
+
+import com.smartspaar.model.ProductDto;
+import com.smartspaar.model.SearchResponse;
+import com.smartspaar.store.jumbo.service.JumboScrapeService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.Instant;
+import java.util.List;
+
+/**
+ * Search endpoint for Jumbo.
+ * It uses Jsoup now.
+ */
+@Tag(name = "Search", description = "Find products in Jumbo")
+@RestController
+@RequestMapping("/v1/search")
+public class SearchController {
+
+    private final JumboScrapeService svc;
+
+    public SearchController(JumboScrapeService svc) {
+        this.svc = svc;
+    }
+
+    /**
+     * Search products by text.
+     * @param query search text
+     * @return SearchResponse list
+     */
+    @Operation(summary = "Search products", description = "Get product list from Jumbo by Jsoup")
+    @GetMapping
+    public SearchResponse search(@RequestParam String query) throws Exception {
+        List<ProductDto> items = svc.search(query);
+        return new SearchResponse(items, false, Instant.now().toEpochMilli());
+    }
+}
+
+/**
+ *
+ *      * Search products by query.
+ *      * TODO: implement real Jsoup.
+ *
+ *    @GetMapping
+ *     public SearchResponse search(@RequestParam String query) {
+ *         // Simple demo data
+ *         List<ProductDto> items = List.of(
+ *                 new ProductDto("Eieren 12 stuks", "Jumbo", "12 stuks", "pack", 4.79, null, "JUMBO"),
+ *                 new ProductDto("Eieren 10 stuks", "Jumbo", "10 stuks", "pack", 4.19, null, "JUMBO")
+ *         );
+ *         return new SearchResponse(items, false, Instant.now().toEpochMilli());
+ *     }
+ */=== ./store-jumbo-service/src/main/java/com/smartspaar/store/jumbo/StoreJumboApplication.java ===
+package com.smartspaar.store.jumbo;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+/**
+ * Jumbo store service.
+ * It returns products from Jumbo site.
+ */
+@SpringBootApplication
+public class StoreJumboApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(StoreJumboApplication.class, args);
+    }
+}=== ./store-jumbo-service/src/main/java/com/smartspaar/store/jumbo/service/JumboScrapeService.java ===
+package com.smartspaar.store.jumbo.service;
+
+import com.smartspaar.model.ProductDto;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.*;
+
+/**
+ * Jumbo scrape service.
+ * It fetches products by query using Jsoup.
+ */
+@Service
+public class JumboScrapeService {
+
+    private static final Pattern PRICE_REGEX = Pattern.compile("€\\s*(\\d+[\\.,]\\d{2})");
+
+    /**
+     * Search products in Jumbo.
+     * @param query search text
+     * @return product list
+     */
+    public List<ProductDto> search(String query) throws Exception {
+        String url = "https://www.jumbo.com/producten/?searchType=keyword&searchTerms=" + encode(query);
+        Document doc = Jsoup.connect(url)
+                .userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome Safari")
+                .timeout(15000)
+                .get();
+
+        // Generic selectors (adjust with browser Inspect if needed)
+        Elements cards = doc.select("article, div[class*='product'], li[class*='product']");
+        List<ProductDto> list = new ArrayList<>();
+
+        int limit = Math.min(15, cards.size());
+        for (int i = 0; i < limit; i++) {
+            Element c = cards.get(i);
+            String name = textFirst(c, "h3, h2, .title, [class*='title']");
+            if (name.isBlank()) {
+                name = firstLine(c.text());
+            }
+            Double price = parsePrice(c.text());
+            // Fallback: if no price found, skip
+            if (name.isBlank() || price == null) continue;
+
+            // Try to guess quantity/brand from text
+            String quantity = findQuantity(c.text());
+            String brand = findBrand(name);
+
+            list.add(new ProductDto(
+                    name.trim(),
+                    brand,
+                    quantity,
+                    "pack",
+                    price,
+                    null,
+                    "JUMBO"
+            ));
+        }
+        return list;
+    }
+
+    private String encode(String q) {
+        return q.replace(" ", "%20");
+    }
+
+    private String textFirst(Element e, String css) {
+        Element t = e.selectFirst(css);
+        return t != null ? t.text() : "";
+    }
+
+    private String firstLine(String t) {
+        String[] lines = t.split("\\r?\\n");
+        return lines.length > 0 ? lines[0] : "";
+    }
+
+    private Double parsePrice(String text) {
+        Matcher m = PRICE_REGEX.matcher(text);
+        if (m.find()) return Double.parseDouble(m.group(1).replace(",", "."));
+        return null;
+    }
+
+    private String findQuantity(String text) {
+        Matcher m = Pattern.compile("(\\d+)\\s*(stuks|stuk|x)", Pattern.CASE_INSENSITIVE).matcher(text);
+        if (m.find()) return m.group(1) + " " + m.group(2);
+        return "Unknown";
+    }
+
+    private String findBrand(String name) {
+        if (name.toLowerCase().startsWith("jumbo")) return "Jumbo";
+        return "Unknown";
+    }
+}=== ./store-plus-service/src/test/java/com/smartspaar/storeplusservice/StorePlusServiceApplicationTests.java ===
+package com.smartspaar.storeplusservice;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class StorePlusServiceApplicationTests {
+
+	@Test
+	void contextLoads() {
+	}
+
+}
+=== ./store-plus-service/src/main/java/com/smartspaar/storeplusservice/StorePlusServiceApplication.java ===
+package com.smartspaar.storeplusservice;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class StorePlusServiceApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(StorePlusServiceApplication.class, args);
+	}
+
+}
+=== ./store-plus-service/src/main/java/com/smartspaar/storeplusservice/config/OpenApiConfig.java ===
+package com.smartspaar.storeplusservice.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * OpenAPI config.
+ * Sets title and version.
+ */
+@Configuration
+public class OpenApiConfig {
+
+    /**
+     * Build OpenAPI info.
+     * @return OpenAPI bean
+     */
+    @Bean
+    public OpenAPI apiInfo() {
+        return new OpenAPI().info(
+                new Info()
+                        .title("Store Plus Service API")
+                        .version("v1")
+                        .description("Search products in Plus. Get name, brand, quantity, prices. Query example: 'eieren'.")
+        );
+    }
+}=== ./store-plus-service/src/main/java/com/smartspaar/storeplusservice/config/SwaggerLinksLogger.java ===
+package com.smartspaar.storeplusservice.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+
+/**
+ * Print Swagger links on startup.
+ * It also prints app name.
+ */
+@Component
+public class SwaggerLinksLogger {
+
+    /** App name from config. */
+    @Value("${spring.application.name:app}")
+    private String appName;
+
+    /** HTTP port. */
+    @Value("${server.port:8080}")
+    private int port;
+
+    /** Context path (optional). */
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
+
+    /** Swagger UI path. */
+    @Value("${springdoc.swagger-ui.path:/swagger-ui.html}")
+    private String swaggerUiPath;
+
+    /** OpenAPI docs path. */
+    @Value("${springdoc.api-docs.path:/v3/api-docs}")
+    private String apiDocsPath;
+
+    /**
+     * Print links when app is ready.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void printLinks() {
+        String base = "http://localhost:" + port + (contextPath == null ? "" : contextPath);
+        System.out.println("\n==== Swagger (" + appName + ") ====");
+        System.out.println("UI : " + base + swaggerUiPath);
+        System.out.println("API: " + base + apiDocsPath + "\n");
+    }
+}=== ./store-dirk-service/src/test/java/com/smartspaar/storedirkservice/StoreDirkServiceApplicationTests.java ===
+package com.smartspaar.storedirkservice;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class StoreDirkServiceApplicationTests {
+
+	@Test
+	void contextLoads() {
+	}
+
+}
+=== ./store-dirk-service/src/main/java/com/smartspaar/storedirkservice/config/OpenApiConfig.java ===
+package com.smartspaar.storedirkservice.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * OpenAPI config.
+ * Sets title and version.
+ */
+@Configuration
+public class OpenApiConfig {
+
+    /**
+     * Build OpenAPI info.
+     * @return OpenAPI bean
+     */
+    @Bean
+    public OpenAPI apiInfo() {
+        return new OpenAPI().info(
+                new Info()
+                        .title("Store Dirk Service API")
+                        .version("v1")
+                        .description("Search products in Dirk. Get name, brand, quantity, prices. Query example: 'eieren'.")
+        );
+    }
+}=== ./store-dirk-service/src/main/java/com/smartspaar/storedirkservice/config/SwaggerLinksLogger.java ===
+package com.smartspaar.storedirkservice.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+
+/**
+ * Print Swagger links on startup.
+ * It also prints app name.
+ */
+@Component
+public class SwaggerLinksLogger {
+
+    /** App name from config. */
+    @Value("${spring.application.name:app}")
+    private String appName;
+
+    /** HTTP port. */
+    @Value("${server.port:8080}")
+    private int port;
+
+    /** Context path (optional). */
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
+
+    /** Swagger UI path. */
+    @Value("${springdoc.swagger-ui.path:/swagger-ui.html}")
+    private String swaggerUiPath;
+
+    /** OpenAPI docs path. */
+    @Value("${springdoc.api-docs.path:/v3/api-docs}")
+    private String apiDocsPath;
+
+    /**
+     * Print links when app is ready.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void printLinks() {
+        String base = "http://localhost:" + port + (contextPath == null ? "" : contextPath);
+        System.out.println("\n==== Swagger (" + appName + ") ====");
+        System.out.println("UI : " + base + swaggerUiPath);
+        System.out.println("API: " + base + apiDocsPath + "\n");
+    }
+}=== ./store-dirk-service/src/main/java/com/smartspaar/storedirkservice/StoreDirkServiceApplication.java ===
+package com.smartspaar.storedirkservice;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class StoreDirkServiceApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(StoreDirkServiceApplication.class, args);
+	}
+
+}
+=== ./store-ah-service/src/test/java/com/smartspaar/storeahservice/StoreAhServiceApplicationTests.java ===
+package com.smartspaar.storeahservice;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class StoreAhServiceApplicationTests {
+
+    @Test
+    void contextLoads() {
+    }
+
+}
+=== ./store-ah-service/src/main/java/com/smartspaar/storeahservice/StoreAhServiceApplication.java ===
+package com.smartspaar.storeahservice;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+/**
+ * Store AH Service.
+ * Fetches products from Albert Heijn.
+ */
+@SpringBootApplication
+public class StoreAhServiceApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(StoreAhServiceApplication.class, args);
+    }
+}=== ./store-ah-service/src/main/java/com/smartspaar/storeahservice/config/OpenApiConfig.java ===
+package com.smartspaar.storeahservice.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * OpenAPI config.
+ * Sets title and version.
+ */
+@Configuration
+public class OpenApiConfig {
+
+    /**
+     * Build OpenAPI info.
+     * @return OpenAPI bean
+     */
+    @Bean
+    public OpenAPI apiInfo() {
+        return new OpenAPI().info(
+                new Info()
+                        .title("Store AH Service API")
+                        .version("v1")
+                        .description("Search products in AH. Get name, brand, quantity, prices. Query example: 'eieren'.")
+        );
+    }
+}=== ./store-ah-service/src/main/java/com/smartspaar/storeahservice/config/SwaggerLinksLogger.java ===
+package com.smartspaar.storeahservice.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+
+/**
+ * Print Swagger links on startup.
+ * It also prints app name.
+ */
+@Component
+public class SwaggerLinksLogger {
+
+    /** App name from config. */
+    @Value("${spring.application.name:app}")
+    private String appName;
+
+    /** HTTP port. */
+    @Value("${server.port:8080}")
+    private int port;
+
+    /** Context path (optional). */
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
+
+    /** Swagger UI path. */
+    @Value("${springdoc.swagger-ui.path:/swagger-ui.html}")
+    private String swaggerUiPath;
+
+    /** OpenAPI docs path. */
+    @Value("${springdoc.api-docs.path:/v3/api-docs}")
+    private String apiDocsPath;
+
+    /**
+     * Print links when app is ready.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void printLinks() {
+        String base = "http://localhost:" + port + (contextPath == null ? "" : contextPath);
+        System.out.println("\n==== Swagger (" + appName + ") ====");
+        System.out.println("UI : " + base + swaggerUiPath);
+        System.out.println("API: " + base + apiDocsPath + "\n");
+    }
+}=== ./store-ah-service/src/main/java/com/smartspaar/storeahservice/web/AhController.java ===
+package com.smartspaar.storeahservice.web;
+
+import com.smartspaar.model.ProductDto;
+import com.smartspaar.model.SearchResponse;
+import com.smartspaar.storeahservice.service.AhScrapeService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+/**
+ * AH API.
+ * Search products in Albert Heijn.
+ */
+@Tag(name = "AH", description = "Search products in Albert Heijn")
+@RestController
+@RequestMapping("/v1/search")
+public class AhController {
+
+    private final AhScrapeService svc;
+
+    public AhController(AhScrapeService svc) {
+        this.svc = svc;
+    }
+
+    /**
+     * Search products.
+     * @param query search text
+     * @return mapped products
+     */
+    @Operation(summary = "Search products", description = "Search products by query")
+    @GetMapping
+    public SearchResponse search(@RequestParam String query) {
+        List<ProductDto> items = svc.scrape(query);
+        return new SearchResponse(items, true, System.currentTimeMillis());
+    }
+}=== ./store-ah-service/src/main/java/com/smartspaar/storeahservice/service/AhScrapeService.java ===
+package com.smartspaar.storeahservice.service;
+
+import com.smartspaar.model.ProductDto;
+import io.github.bonigarcia.wdm.WebDriverManager;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * Scrape service for Albert Heijn using Selenium.
+ * It scrapes product data from AH website with real browser.
+ */
+@Service
+public class AhScrapeService {
+
+    private static final String BASE_URL = "https://www.ah.nl";
+
+    /**
+     * Scrapes products by query using Selenium.
+     *
+     * @param query search term
+     * @return list of products
+     */
+    public List<ProductDto> scrape(String query) {
+        List<ProductDto> items = new ArrayList<>();
+        WebDriver driver = null;
+        try {
+            // Setup ChromeDriver
+            WebDriverManager.chromedriver().setup();
+            ChromeOptions options = new ChromeOptions();
+            options.addArguments("--headless"); // Run in background (no GUI)
+            options.addArguments("--disable-gpu");
+            options.addArguments("--no-sandbox");
+            options.addArguments("--disable-dev-shm-usage");
+            options.addArguments("--window-size=1920,1080");
+
+            driver = new ChromeDriver(options);
+            driver.manage().timeouts().implicitlyWait(10, TimeUnit.SECONDS);
+
+            // Build URL
+            String url = BASE_URL + "/zoeken?search=" + java.net.URLEncoder.encode(query, "UTF-8");
+            driver.get(url);
+
+            // Wait for page to load
+            Thread.sleep(2000); // Simple wait — better to use WebDriverWait in production
+
+            // Find all product elements
+            List<WebElement> productElements = driver.findElements(By.cssSelector("div.product-tile, div.product-item, div.product-tile__content"));
+
+            // If no products found, try alternatives
+            // 🔍 برای تست: تعداد محصولات و محتوای اولین محصول را نمایش بده
+            System.out.println("Found " + productElements.size() + " products");
+            if (!productElements.isEmpty()) {
+                System.out.println("First product text:");
+                System.out.println(productElements.get(0).getText());
+            } else {
+                System.out.println("No products found. Trying alternative selectors...");
+            }
+
+            // Iterate over each product element
+            for (WebElement el : productElements) {
+                // Extract name (title)
+                String name = "";
+                try {
+                    WebElement nameEl = el.findElement(By.cssSelector("h2.product-tile__title"));
+                    name = nameEl.getText().trim();
+                } catch (Exception e) {
+                    // Fallback
+                    try {
+                        WebElement nameEl = el.findElement(By.cssSelector("h2.product-title"));
+                        name = nameEl.getText().trim();
+                    } catch (Exception ex) {
+                        name = "Unknown Product";
+                    }
+                }
+
+                // Extract brand (optional)
+                String brand = "";
+                try {
+                    WebElement brandEl = el.findElement(By.cssSelector("span.product-tile__brand"));
+                    brand = brandEl.getText().trim();
+                } catch (Exception e) {
+                    // Ignore
+                }
+
+                // Extract quantity (e.g., "12 stuks")
+                String quantity = "";
+                try {
+                    WebElement quantityEl = el.findElement(By.cssSelector("span.product-tile__quantity"));
+                    quantity = quantityEl.getText().trim();
+                } catch (Exception e) {
+                    // Ignore
+                }
+
+                // Extract packaging (optional)
+                String packaging = "";
+                try {
+                    WebElement packagingEl = el.findElement(By.cssSelector("span.product-tile__packaging"));
+                    packaging = packagingEl.getText().trim();
+                } catch (Exception e) {
+                    // Ignore
+                }
+
+                // Extract regular price
+                double regularPrice = 0.0;
+                try {
+                    WebElement priceIntEl = el.findElement(By.cssSelector("span.price__integer"));
+                    WebElement priceDecEl = el.findElement(By.cssSelector("span.price__decimal"));
+                    String intPart = priceIntEl.getText().trim();
+                    String decPart = priceDecEl.getText().trim();
+                    regularPrice = Double.parseDouble(intPart + "." + decPart);
+                } catch (Exception e) {
+                    // Ignore
+                }
+
+                // Extract discount price (if exists)
+                double discountPrice = 0.0;
+                try {
+                    WebElement discountEl = el.findElement(By.cssSelector("span.price--discounted"));
+                    WebElement discIntEl = discountEl.findElement(By.cssSelector("span.price__integer"));
+                    WebElement discDecEl = discountEl.findElement(By.cssSelector("span.price__decimal"));
+                    String intPart = discIntEl.getText().trim();
+                    String decPart = discDecEl.getText().trim();
+                    discountPrice = Double.parseDouble(intPart + "." + decPart);
+                } catch (Exception e) {
+                    // Ignore
+                }
+
+                // Create ProductDto
+                ProductDto dto = new ProductDto(
+                        name,
+                        brand,
+                        quantity,
+                        packaging,
+                        regularPrice,
+                        discountPrice,
+                        "AH"
+                );
+                items.add(dto);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("Error scraping AH for query: " + query);
+        } finally {
+            if (driver != null) {
+                driver.quit(); // Close browser
+            }
+        }
+        return items;
+    }
+}=== ./price-catalog-service/src/test/java/com/smartspaar/pricecatalogservice/PriceCatalogServiceApplicationTests.java ===
+package com.smartspaar.pricecatalogservice;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class PriceCatalogServiceApplicationTests {
+
+	@Test
+	void contextLoads() {
+	}
+
+}
+=== ./price-catalog-service/src/main/java/com/smartspaar/pricecatalogservice/PriceCatalogServiceApplication.java ===
+package com.smartspaar.pricecatalogservice;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
+
+/**
+ * Price catalog app.
+ * Stores prices in DB.
+ */
+@SpringBootApplication
+@EntityScan(basePackages = "com.smartspaar.pricecatalogservice.model")
+public class PriceCatalogServiceApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(PriceCatalogServiceApplication.class, args);
+	}
+}=== ./price-catalog-service/src/main/java/com/smartspaar/pricecatalogservice/repository/PriceRepository.java ===
+package com.smartspaar.pricecatalogservice.repository;
+
+import com.smartspaar.pricecatalogservice.model.PriceEntity;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
+
+/**
+ * JPA repo for prices.
+ * It finds prices by query.
+ */
+public interface PriceRepository extends JpaRepository<PriceEntity, Long> {
+    List<PriceEntity> findByQueryIgnoreCase(String query);
+}=== ./price-catalog-service/src/main/java/com/smartspaar/pricecatalogservice/config/OpenApiConfig.java ===
+package com.smartspaar.pricecatalogservice.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import org.springframework.context.annotation.*;
+
+/**
+ * OpenAPI config.
+ * Set title and version.
+ */
+@Configuration
+public class OpenApiConfig {
+    /**
+     * Build OpenAPI info.
+     * @return OpenAPI bean
+     */
+    @Bean
+    public OpenAPI api() {
+        return new OpenAPI()
+                .info(new Info().title("Price Catalog API").version("v1")
+                        .description("Save and read prices in Postgres"));
+    }
+}=== ./price-catalog-service/src/main/java/com/smartspaar/pricecatalogservice/config/SwaggerLinksLogger.java ===
+package com.smartspaar.pricecatalogservice.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+
+/**
+ * Print Swagger links on startup.
+ * It also prints app name.
+ */
+@Component
+public class SwaggerLinksLogger {
+
+    /** App name from config. */
+    @Value("${spring.application.name:app}")
+    private String appName;
+
+    /** HTTP port. */
+    @Value("${server.port:8080}")
+    private int port;
+
+    /** Context path (optional). */
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
+
+    /** Swagger UI path. */
+    @Value("${springdoc.swagger-ui.path:/swagger-ui.html}")
+    private String swaggerUiPath;
+
+    /** OpenAPI docs path. */
+    @Value("${springdoc.api-docs.path:/v3/api-docs}")
+    private String apiDocsPath;
+
+    /**
+     * Print links when app is ready.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void printLinks() {
+        String base = "http://localhost:" + port + (contextPath == null ? "" : contextPath);
+        System.out.println("\n==== Swagger (" + appName + ") ====");
+        System.out.println("UI : " + base + swaggerUiPath);
+        System.out.println("API: " + base + apiDocsPath + "\n");
+    }
+}=== ./price-catalog-service/src/main/java/com/smartspaar/pricecatalogservice/web/PriceCatalogController.java ===
+package com.smartspaar.pricecatalogservice.web;
+
+import com.smartspaar.model.PriceBulkRequest;
+import com.smartspaar.model.ProductDto;
+import com.smartspaar.model.SearchResponse;
+import com.smartspaar.pricecatalogservice.model.PriceEntity;
+import com.smartspaar.pricecatalogservice.service.PriceCatalogService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+/**
+ * Price catalog API.
+ * Save and read prices.
+ */
+@Tag(name = "Prices", description = "Save and read prices")
+@RestController
+@RequestMapping("/v1/prices")
+public class PriceCatalogController {
+
+    private final PriceCatalogService svc;
+
+    public PriceCatalogController(PriceCatalogService svc) {
+        this.svc = svc;
+    }
+
+    /**
+     * Save bulk prices.
+     * @param req bulk request
+     * @return saved count
+     */
+    @Operation(summary = "Save bulk prices", description = "Save list of products with query")
+    @PostMapping("/bulk")
+    public int bulk(@RequestBody PriceBulkRequest req) {
+        return svc.saveBulk(req.query(), req.items());
+    }
+
+    /**
+     * Read prices by query.
+     * @param query search text
+     * @return mapped products
+     */
+    @Operation(summary = "Read prices", description = "Read saved prices by query")
+    @GetMapping
+    public SearchResponse read(@RequestParam String query) {
+        List<PriceEntity> list = svc.findByQuery(query);
+        List<ProductDto> items = list.stream().map(e ->
+                new ProductDto(
+                        e.getName(), e.getBrand(), e.getQuantity(), e.getPackaging(),
+                        e.getRegularPrice(), e.getDiscountPrice(), e.getStore()
+                )
+        ).toList();
+        return new SearchResponse(items, true, System.currentTimeMillis());
+    }
+}=== ./price-catalog-service/src/main/java/com/smartspaar/pricecatalogservice/model/PriceEntity.java ===
+package com.smartspaar.pricecatalogservice.model;
+
+import jakarta.persistence.*;
+
+import java.time.Instant;
+
+/**
+ * Price entity.
+ * It maps product price in a store.
+ */
+@Entity
+@Table(name = "prices")
+public class PriceEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String store;
+    private String query;
+    private String name;
+    private String brand;
+    private String quantity;
+    private String packaging;
+    @Column(name = "regular_price")
+    private Double regularPrice;
+    @Column(name = "discount_price")
+    private Double discountPrice;
+    private String currency;
+    @Column(name = "unit_price")
+    private Double unitPrice;
+    @Column(name = "source_type")
+    private String sourceType;
+    private Integer confidence;
+    @Column(name = "last_updated")
+    private Instant lastUpdated;
+
+    /** Getters/Setters omitted for brevity */
+    // --- getters/setters quick ---
+    public Long getId() { return id; }
+    public String getStore() { return store; }
+    public void setStore(String store) { this.store = store; }
+    public String getQuery() { return query; }
+    public void setQuery(String query) { this.query = query; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public String getBrand() { return brand; }
+    public void setBrand(String brand) { this.brand = brand; }
+    public String getQuantity() { return quantity; }
+    public void setQuantity(String quantity) { this.quantity = quantity; }
+    public String getPackaging() { return packaging; }
+    public void setPackaging(String packaging) { this.packaging = packaging; }
+    public Double getRegularPrice() { return regularPrice; }
+    public void setRegularPrice(Double regularPrice) { this.regularPrice = regularPrice; }
+    public Double getDiscountPrice() { return discountPrice; }
+    public void setDiscountPrice(Double discountPrice) { this.discountPrice = discountPrice; }
+    public String getCurrency() { return currency; }
+    public void setCurrency(String currency) { this.currency = currency; }
+    public Double getUnitPrice() { return unitPrice; }
+    public void setUnitPrice(Double unitPrice) { this.unitPrice = unitPrice; }
+    public String getSourceType() { return sourceType; }
+    public void setSourceType(String sourceType) { this.sourceType = sourceType; }
+    public Integer getConfidence() { return confidence; }
+    public void setConfidence(Integer confidence) { this.confidence = confidence; }
+    public Instant getLastUpdated() { return lastUpdated; }
+    public void setLastUpdated(Instant lastUpdated) { this.lastUpdated = lastUpdated; }
+}=== ./price-catalog-service/src/main/java/com/smartspaar/pricecatalogservice/service/PriceCatalogService.java ===
+package com.smartspaar.pricecatalogservice.service;
+
+import com.smartspaar.model.ProductDto;
+import com.smartspaar.pricecatalogservice.model.PriceEntity;
+import com.smartspaar.pricecatalogservice.repository.PriceRepository;
+import org.springframework.stereotype.Service;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Catalog service.
+ * It saves and reads prices.
+ */
+@Service
+public class PriceCatalogService {
+
+    private final PriceRepository repo;
+
+    public PriceCatalogService(PriceRepository repo) {
+        this.repo = repo;
+    }
+
+    /**
+     * Save products as prices.
+     * @param query search text
+     * @param items product list
+     * @return saved count
+     */
+    public int saveBulk(String query, List<ProductDto> items) {
+        List<PriceEntity> list = new ArrayList<>();
+        Instant now = Instant.now();
+        for (ProductDto p : items) {
+            PriceEntity e = toEntity(query, p, now);
+            list.add(e);
+        }
+        repo.saveAll(list);
+        return list.size();
+    }
+
+    /**
+     * Read prices by query.
+     * @param query search text
+     * @return price list
+     */
+    public List<PriceEntity> findByQuery(String query) {
+        return repo.findByQueryIgnoreCase(query);
+    }
+
+    private PriceEntity toEntity(String query, ProductDto p, Instant now) {
+        PriceEntity e = new PriceEntity();
+        e.setStore(p.store());
+        e.setQuery(query);
+        e.setName(p.name());
+        e.setBrand(p.brand());
+        e.setQuantity(p.quantity());
+        e.setPackaging(p.packaging());
+        e.setRegularPrice(p.regularPrice());
+        e.setDiscountPrice(p.discountPrice());
+        e.setCurrency("EUR");
+        e.setUnitPrice(null);
+        e.setSourceType("API"); // TODO: set real source type
+        e.setConfidence(90);
+        e.setLastUpdated(now);
+        return e;
+    }
+}=== ./api-gateway/src/main/java/com/smartspaar/gateway/config/OpenApiConfig.java ===
+package com.smartspaar.gateway.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * OpenAPI config.
+ * Sets title and version.
+ */
+@Configuration
+public class OpenApiConfig {
+
+    /**
+     * Build OpenAPI info.
+     * @return OpenAPI bean
+     */
+    @Bean
+    public OpenAPI apiInfo() {
+        return new OpenAPI().info(
+                new Info()
+                        .title("API Gateway")
+                        .version("v1")
+                        .description("")
+        );
+    }
+}=== ./api-gateway/src/main/java/com/smartspaar/gateway/config/SwaggerLinksLogger.java ===
+package com.smartspaar.gateway.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+
+/**
+ * Print Swagger links on startup.
+ * It also prints app name.
+ */
+@Component
+public class SwaggerLinksLogger {
+
+    /** App name from config. */
+    @Value("${spring.application.name:app}")
+    private String appName;
+
+    /** HTTP port. */
+    @Value("${server.port:8080}")
+    private int port;
+
+    /** Context path (optional). */
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
+
+    /** Swagger UI path. */
+    @Value("${springdoc.swagger-ui.path:/swagger-ui.html}")
+    private String swaggerUiPath;
+
+    /** OpenAPI docs path. */
+    @Value("${springdoc.api-docs.path:/v3/api-docs}")
+    private String apiDocsPath;
+
+    /**
+     * Print links when app is ready.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void printLinks() {
+        String base = "http://localhost:" + port + (contextPath == null ? "" : contextPath);
+        System.out.println("\n==== Swagger (" + appName + ") ====");
+        System.out.println("UI : " + base + swaggerUiPath);
+        System.out.println("API: " + base + apiDocsPath + "\n");
+    }
+}=== ./api-gateway/src/main/java/com/smartspaar/gateway/ApiGatewayApplication.java ===
+package com.smartspaar.gateway;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+/**
+ * API Gateway app.
+ * It routes requests to services.
+ */
+@SpringBootApplication
+public class ApiGatewayApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(ApiGatewayApplication.class, args);
+    }
+}=== ./store-spar-service/src/test/java/com/smartspaar/storesparservice/StoreSparServiceApplicationTests.java ===
+package com.smartspaar.storesparservice;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class StoreSparServiceApplicationTests {
+
+	@Test
+	void contextLoads() {
+	}
+
+}
+=== ./store-spar-service/src/main/java/com/smartspaar/storesparservice/config/OpenApiConfig.java ===
+package com.smartspaar.storesparservice.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * OpenAPI config.
+ * Sets title and version.
+ */
+@Configuration
+public class OpenApiConfig {
+
+    /**
+     * Build OpenAPI info.
+     * @return OpenAPI bean
+     */
+    @Bean
+    public OpenAPI apiInfo() {
+        return new OpenAPI().info(
+                new Info()
+                        .title("Store Spar Service API")
+                        .version("v1")
+                        .description("Search products in Spar. Get name, brand, quantity, prices. Query example: 'eieren'.")
+        );
+    }
+}=== ./store-spar-service/src/main/java/com/smartspaar/storesparservice/config/SwaggerLinksLogger.java ===
+package com.smartspaar.storesparservice.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+
+/**
+ * Print Swagger links on startup.
+ * It also prints app name.
+ */
+@Component
+public class SwaggerLinksLogger {
+
+    /** App name from config. */
+    @Value("${spring.application.name:app}")
+    private String appName;
+
+    /** HTTP port. */
+    @Value("${server.port:8080}")
+    private int port;
+
+    /** Context path (optional). */
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
+
+    /** Swagger UI path. */
+    @Value("${springdoc.swagger-ui.path:/swagger-ui.html}")
+    private String swaggerUiPath;
+
+    /** OpenAPI docs path. */
+    @Value("${springdoc.api-docs.path:/v3/api-docs}")
+    private String apiDocsPath;
+
+    /**
+     * Print links when app is ready.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void printLinks() {
+        String base = "http://localhost:" + port + (contextPath == null ? "" : contextPath);
+        System.out.println("\n==== Swagger (" + appName + ") ====");
+        System.out.println("UI : " + base + swaggerUiPath);
+        System.out.println("API: " + base + apiDocsPath + "\n");
+    }
+}=== ./store-spar-service/src/main/java/com/smartspaar/storesparservice/StoreSparServiceApplication.java ===
+package com.smartspaar.storesparservice;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class StoreSparServiceApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(StoreSparServiceApplication.class, args);
+	}
+
+}
+=== ./store-vomar-service/src/test/java/com/smartspaar/storevomarservice/StoreVomarServiceApplicationTests.java ===
+package com.smartspaar.storevomarservice;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class StoreVomarServiceApplicationTests {
+
+	@Test
+	void contextLoads() {
+	}
+
+}
+=== ./store-vomar-service/src/main/java/com/smartspaar/storevomarservice/StoreVomarServiceApplication.java ===
+package com.smartspaar.storevomarservice;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class StoreVomarServiceApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(StoreVomarServiceApplication.class, args);
+	}
+
+}
+=== ./store-vomar-service/src/main/java/com/smartspaar/storevomarservice/config/OpenApiConfig.java ===
+package com.smartspaar.storevomarservice.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * OpenAPI config.
+ * Sets title and version.
+ */
+@Configuration
+public class OpenApiConfig {
+
+    /**
+     * Build OpenAPI info.
+     * @return OpenAPI bean
+     */
+    @Bean
+    public OpenAPI apiInfo() {
+        return new OpenAPI().info(
+                new Info()
+                        .title("Store Vomar Service API")
+                        .version("v1")
+                        .description("Search products in Vomar. Get name, brand, quantity, prices. Query example: 'eieren'.")
+        );
+    }
+}=== ./store-vomar-service/src/main/java/com/smartspaar/storevomarservice/config/SwaggerLinksLogger.java ===
+package com.smartspaar.storevomarservice.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+
+/**
+ * Print Swagger links on startup.
+ * It also prints app name.
+ */
+@Component
+public class SwaggerLinksLogger {
+
+    /** App name from config. */
+    @Value("${spring.application.name:app}")
+    private String appName;
+
+    /** HTTP port. */
+    @Value("${server.port:8080}")
+    private int port;
+
+    /** Context path (optional). */
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
+
+    /** Swagger UI path. */
+    @Value("${springdoc.swagger-ui.path:/swagger-ui.html}")
+    private String swaggerUiPath;
+
+    /** OpenAPI docs path. */
+    @Value("${springdoc.api-docs.path:/v3/api-docs}")
+    private String apiDocsPath;
+
+    /**
+     * Print links when app is ready.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void printLinks() {
+        String base = "http://localhost:" + port + (contextPath == null ? "" : contextPath);
+        System.out.println("\n==== Swagger (" + appName + ") ====");
+        System.out.println("UI : " + base + swaggerUiPath);
+        System.out.println("API: " + base + apiDocsPath + "\n");
+    }
+}=== ./common-model/src/main/java/com/smartspaar/Main.java ===
+package com.smartspaar;
+
+//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
+// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
+public class Main {
+    public static void main(String[] args) {
+        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
+        // to see how IntelliJ IDEA suggests fixing it.
+        System.out.printf("Hello and welcome!");
+
+        for (int i = 1; i <= 5; i++) {
+            //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
+            // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
+            System.out.println("i = " + i);
+        }
+    }
+}=== ./common-model/src/main/java/com/smartspaar/model/ProductDto.java ===
+package com.smartspaar.model;
+
+/**
+ * Product data in simple form.
+ * name: product name
+ * brand: product brand
+ * quantity: like "12 stuks"
+ * packaging: like "pack"
+ * regularPrice: normal price
+ * discountPrice: sale price
+ * store: store code like "JUMBO"
+ */
+public record ProductDto(
+        String name,
+        String brand,
+        String quantity,
+        String packaging,
+        Double regularPrice,
+        Double discountPrice,
+        String store
+) {}=== ./common-model/src/main/java/com/smartspaar/model/PriceBulkRequest.java ===
+package com.smartspaar.model;
+
+import java.util.List;
+
+/**
+ * Bulk price request.
+ * query: search text
+ * items: products to save
+ * fetchedAt: time in ms
+ */
+public record PriceBulkRequest(
+        String query,
+        List<ProductDto> items,
+        long fetchedAt
+) {}=== ./common-model/src/main/java/com/smartspaar/model/SearchResponse.java ===
+package com.smartspaar.model;
+
+import java.util.List;
+
+/**
+ * Search result list.
+ * items: product list
+ * cached: from cache or not
+ * lastUpdated: epoch millis
+ */
+public record SearchResponse(
+        List<ProductDto> items,
+        boolean cached,
+        long lastUpdated
+) {}=== ./aggregator-service/src/main/java/com/smartspaar/aggregatorservice/agg/config/OpenApiConfig.java ===
+package com.smartspaar.aggregatorservice.agg.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * OpenAPI config.
+ * Sets title and version.
+ */
+@Configuration
+public class OpenApiConfig {
+
+    /**
+     * Build OpenAPI info.
+     * @return OpenAPI bean
+     */
+    @Bean
+    public OpenAPI apiInfo() {
+        return new OpenAPI().info(
+                new Info()
+                        .title("Aggregator API")
+                        .version("v1")
+                        .description("Compare products across stores (Jumbo, AH, Lidl...). Returns merged list sorted by price.")
+        );
+    }
+}=== ./aggregator-service/src/main/java/com/smartspaar/aggregatorservice/agg/config/SwaggerLinksLogger.java ===
+package com.smartspaar.aggregatorservice.agg.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+
+/**
+ * Print Swagger links on startup.
+ * It also prints app name.
+ */
+@Component
+public class SwaggerLinksLogger {
+
+    /** App name from config. */
+    @Value("${spring.application.name:app}")
+    private String appName;
+
+    /** HTTP port. */
+    @Value("${server.port:8080}")
+    private int port;
+
+    /** Context path (optional). */
+    @Value("${server.servlet.context-path:}")
+    private String contextPath;
+
+    /** Swagger UI path. */
+    @Value("${springdoc.swagger-ui.path:/swagger-ui.html}")
+    private String swaggerUiPath;
+
+    /** OpenAPI docs path. */
+    @Value("${springdoc.api-docs.path:/v3/api-docs}")
+    private String apiDocsPath;
+
+    /**
+     * Print links when app is ready.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void printLinks() {
+        String base = "http://localhost:" + port + (contextPath == null ? "" : contextPath);
+        System.out.println("\n==== Swagger (" + appName + ") ====");
+        System.out.println("UI : " + base + swaggerUiPath);
+        System.out.println("API: " + base + apiDocsPath + "\n");
+    }
+}=== ./aggregator-service/src/main/java/com/smartspaar/aggregatorservice/agg/config/RedisConfig.java ===
+package com.smartspaar.aggregatorservice.agg.config;
+
+import com.smartspaar.model.SearchResponse;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
+
+/**
+ * Redis config.
+ * It sets key and value serializer.
+ */
+@Configuration
+public class RedisConfig {
+    @Bean
+    public RedisTemplate<String, SearchResponse> redisTemplate(RedisConnectionFactory cf) {
+        RedisTemplate<String, SearchResponse> t = new RedisTemplate<>();
+        t.setConnectionFactory(cf);
+        t.setKeySerializer(new StringRedisSerializer());
+        t.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+        return t;
+    }
+}=== ./aggregator-service/src/main/java/com/smartspaar/aggregatorservice/agg/web/CompareController.java ===
+package com.smartspaar.aggregatorservice.agg.web;
+
+import com.smartspaar.aggregatorservice.agg.client.StoreAhClient;
+import com.smartspaar.aggregatorservice.agg.client.StoreJumboClient;
+import com.smartspaar.aggregatorservice.agg.client.StoreLidlClient;
+import com.smartspaar.model.ProductDto;
+import com.smartspaar.model.SearchResponse;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
+/**
+ * Compare products.
+ * Merge stores and sort by price.
+ */
+@RestController
+@RequestMapping("/v1/compare")
+public class CompareController {
+
+    private final StoreJumboClient jumbo;
+    private final StoreAhClient ah;
+    private final StoreLidlClient lidl;
+    private final RedisTemplate<String, SearchResponse> redis;
+
+    public CompareController(StoreJumboClient jumbo,
+                             StoreAhClient ah,
+                             StoreLidlClient lidl,
+                             RedisTemplate<String, SearchResponse> redis) {
+        this.jumbo = jumbo;
+        this.ah = ah;
+        this.lidl = lidl;
+        this.redis = redis;
+    }
+
+    /** Compare by query. Use cache first. */
+    @GetMapping
+    public SearchResponse compare(@RequestParam String query) {
+        String key = "cmp:" + query;
+        SearchResponse c = redis.opsForValue().get(key);
+        if (c != null) return c;
+
+        List<ProductDto> all = new ArrayList<>();
+        try { all.addAll(jumbo.search(query).items()); } catch (Exception ignored) {}
+        try { all.addAll(ah.search(query).items()); } catch (Exception ignored) {}
+        try { all.addAll(lidl.search(query).items()); } catch (Exception ignored) {}
+
+        all.sort(Comparator.comparingDouble(this::priceNow));
+        SearchResponse resp = new SearchResponse(all, false, Instant.now().toEpochMilli());
+        redis.opsForValue().set(key, resp);
+        redis.expire(key, java.time.Duration.ofHours(2));
+        return resp;
+    }
+
+    /** Get final price. */
+    private double priceNow(ProductDto p) {
+        Double d = p.discountPrice();
+        Double r = p.regularPrice();
+        if (d != null) return d;
+        if (r != null) return r;
+        return Double.MAX_VALUE;
+    }
+}=== ./aggregator-service/src/main/java/com/smartspaar/aggregatorservice/agg/web/FetchController.java ===
+package com.smartspaar.aggregatorservice.agg.web;
+
+import com.smartspaar.aggregatorservice.agg.client.PriceCatalogClient;
+import com.smartspaar.aggregatorservice.agg.client.StoreJumboClient;
+import com.smartspaar.model.PriceBulkRequest;
+import com.smartspaar.model.ProductDto;
+import com.smartspaar.model.SearchResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
+/**
+ * Fetch controller.
+ * It fetches from stores and saves.
+ */
+@Tag(name = "Fetch", description = "Fetch prices in background")
+@RestController
+@RequestMapping("/v1/fetch")
+public class FetchController {
+
+    private final StoreJumboClient jumbo;
+    private final PriceCatalogClient catalog;
+    private final RedisTemplate<String, SearchResponse> redis;
+
+    public FetchController(StoreJumboClient jumbo, PriceCatalogClient catalog, RedisTemplate<String, SearchResponse> redis) {
+        this.jumbo = jumbo;
+        this.catalog = catalog;
+        this.redis = redis;
+    }
+
+    /**
+     * Fetch and save prices.
+     * @param query search text
+     * @return SearchResponse merged
+     */
+    @Operation(summary = "Fetch prices", description = "Fetch from stores, save to catalog, cache response")
+    @PostMapping
+    public SearchResponse fetch(@RequestParam String query) {
+        List<ProductDto> all = new ArrayList<>();
+
+        try {
+            var r = jumbo.search(query);
+            if (r != null && r.items() != null) all.addAll(r.items());
+        } catch (Exception ignored) {}
+
+        // TODO: add other stores here (AH, Lidl, ...)
+
+        // Save to catalog
+        catalog.bulk(new PriceBulkRequest(query, all, Instant.now().toEpochMilli()));
+
+        // Sort and cache
+        all.sort(Comparator.comparingDouble(this::priceNow));
+        SearchResponse resp = new SearchResponse(all, false, System.currentTimeMillis());
+        String key = "cmp:" + query;
+        redis.opsForValue().set(key, resp);
+        redis.expire(key, java.time.Duration.ofHours(2));
+        return resp;
+    }
+
+    /** Get effective price. */
+    private double priceNow(ProductDto p) {
+        Double d = p.discountPrice();
+        Double r = p.regularPrice();
+        if (d != null) return d;
+        if (r != null) return r;
+        return Double.MAX_VALUE;
+    }
+}=== ./aggregator-service/src/main/java/com/smartspaar/aggregatorservice/agg/client/StoreJumboClient.java ===
+package com.smartspaar.aggregatorservice.agg.client;
+
+import com.smartspaar.model.SearchResponse;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+/**
+ * Call Jumbo store.
+ * Return search result.
+ */
+@FeignClient(
+        name = "store-jumbo",              // unique bean name
+        contextId = "storeJumboClient",    // unique context id
+        url = "${stores.jumbo.url}"
+)
+public interface StoreJumboClient {
+    /** Search products by query. */
+    @GetMapping("/v1/search")
+    SearchResponse search(@RequestParam String query);
+}=== ./aggregator-service/src/main/java/com/smartspaar/aggregatorservice/agg/client/StoreAhClient.java ===
+package com.smartspaar.aggregatorservice.agg.client;
+
+import com.smartspaar.model.SearchResponse;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+/**
+ * Call AH store.
+ * Return search result.
+ */
+@FeignClient(
+        name = "store-ah",               // unique bean name
+        contextId = "storeAhClient",     // unique context id
+        url = "${stores.ah.url}"
+)
+public interface StoreAhClient {
+    /** Search products by query. */
+    @GetMapping("/v1/search")
+    SearchResponse search(@RequestParam String query);
+}=== ./aggregator-service/src/main/java/com/smartspaar/aggregatorservice/agg/client/StoreLidlClient.java ===
+package com.smartspaar.aggregatorservice.agg.client;
+
+import com.smartspaar.model.SearchResponse;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+/**
+ * Call Lidl store.
+ * Return search result.
+ */
+@FeignClient(
+        name = "store-lidl",              // unique bean name
+        contextId = "storeLidlClient",    // unique context id
+        url = "${stores.lidl.url}"
+)
+public interface StoreLidlClient {
+    /** Search products by query. */
+    @GetMapping("/v1/search")
+    SearchResponse search(@RequestParam String query);
+}=== ./aggregator-service/src/main/java/com/smartspaar/aggregatorservice/agg/client/PriceCatalogClient.java ===
+package com.smartspaar.aggregatorservice.agg.client;
+
+import com.smartspaar.model.PriceBulkRequest;
+import com.smartspaar.model.SearchResponse;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.*;
+
+/**
+ * Call price-catalog service.
+ * Save and read prices.
+ */
+@FeignClient(
+        name = "price-catalog",
+        contextId = "priceCatalogClient",
+        url = "${catalog.url}"
+)
+public interface PriceCatalogClient {
+    /** Save bulk prices. */
+    @PostMapping("/v1/prices/bulk")
+    int bulk(@RequestBody PriceBulkRequest req);
+
+    /** Read prices by query. */
+    @GetMapping("/v1/prices")
+    SearchResponse read(@RequestParam String query);
+}=== ./aggregator-service/src/main/java/com/smartspaar/aggregatorservice/AggregatorServiceApplication.java ===
+package com.smartspaar.aggregatorservice;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+
+/**
+ * Aggregator app.
+ * It starts REST server.
+ * It scans Feign clients.
+ */
+@SpringBootApplication
+@EnableFeignClients(basePackages = "com.smartspaar.aggregatorservice.agg.client")
+public class AggregatorServiceApplication {
+
+	/**
+	 * Start application.
+	 * This is main method.
+	 */
+	public static void main(String[] args) {
+		SpringApplication.run(AggregatorServiceApplication.class, args);
+	}
+}=== ./src/main/java/com/smartspaar/Main.java ===
+package com.smartspaar;
+
+//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
+// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
+public class Main {
+    public static void main(String[] args) {
+        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
+        // to see how IntelliJ IDEA suggests fixing it.
+        System.out.printf("Hello and welcome!");
+
+        for (int i = 1; i <= 5; i++) {
+            //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
+            // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
+            System.out.println("i = " + i);
+        }
+    }
+}

@@ -14,18 +14,7 @@
     <name>store-ah-service</name>
     <description>store-ah-service</description>
     <url/>
-    <licenses>
-        <license/>
-    </licenses>
-    <developers>
-        <developer/>
-    </developers>
-    <scm>
-        <connection/>
-        <developerConnection/>
-        <tag/>
-        <url/>
-    </scm>
+
     <properties>
         <java.version>17</java.version>
     </properties>
@@ -49,12 +38,28 @@
             <version>2.6.0</version>
         </dependency>
 
-        <!-- Why: Swagger UI for REST testing (WebMVC) -->
+        <!-- Why: Web scraping -->
         <dependency>
-            <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>2.6.0</version>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.18.1</version> <!-- آخرین نسخه پایدار -->
         </dependency>
+
+        <!-- Why: use shared DTOs (ProductDto, SearchResponse) -->
+        <dependency>
+            <groupId>com.smartspaar</groupId>
+            <artifactId>common-model</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+            <!-- Playwright for Java -->
+            <dependency>
+                <groupId>com.microsoft.playwright</groupId>
+                <artifactId>playwright</artifactId>
+                <version>1.44.0</version>
+            </dependency>
+
+
     </dependencies>
 
     <build>
