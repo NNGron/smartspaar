@@ -1,59 +1,58 @@
-# SmartSpaar
+# SmartSpaar 🛒
 
-Microservices backend for real‑time grocery price comparison in the Netherlands.  
+Educational Microservice Project with Monitoring and Jumbo Price Fetching SmartSpaar is an educational project built with a modular architecture (monorepo) to demonstrate key concepts in microservices, external data fetching, and professional monitoring systems.
+ 
 Java 21 • Spring Boot 3.3 • Spring Cloud • Redis • Feign • Maven
 
-## Overview
+---
+## Project Goals
 
-- Compare product prices across stores (Jumbo, AH, Lidl, …).
-- Fast response using Redis cache (TTL + ready for SWR).
-- Microservices: aggregator + store services (one per store).
-- Easy to add/remove stores via new service + simple config.
+1. **Fetch product prices from the Jumbo online store**  
+   Using Spring Boot and scraping/API techniques, the project retrieves product pricing data from Jumbo.
 
+2. **Implement a complete monitoring system**  
+   With Prometheus, Grafana, and exporters, the system monitors services, databases, and infrastructure in real time.
+
+---
 ## Tech Stack
-
 - Java 21 (LTS), Maven
-- Spring Boot 3.3.x, Spring Cloud 2023.x (OpenFeign, Gateway later)
+- Spring Boot 3.3.x, Spring Cloud  later)
+- Docker & Docker Compose
+- Prometheus, Grafana
+- PostgreSQL, Redis, Kafka
+- H2 (for dev testing)
+- Spring Cloud Gateway 2023.x (OpenFeign, Gateway)
+- OpenAPI / Swagger
 - Redis (cache), Docker (dev)
-- Jsoup/JSON (scraping/API), Playwright/Selenium (fallback, later)
+- Jsoup/JSON (scraping/API)
 
-## Monorepo Layout  
-smartspaar/
-pom.xml # parent (not a Spring app)
-common-model/ # shared DTOs (no Spring)
-aggregator-service/ # REST+Feign+Redis (compare results)
-store-jumbo-service/ # Jumbo store service (REST, demo now)
-store-ah-service/ # (to add)
-store-lidl-service/ # (to add)
-store-plus-service/ # (to add)
-store-dirk-service/ # (to add)
-store-vomar-service/ # (to add)
-store-spar-service/ # (to add)
-store-aldi-service/ # (to add)  
+## Project Structure
+| Module | Responsibility |
+|--------|----------------|
+| `smartspaar` | parent (not a Spring app). |
+| `store-jumbo-service` | Jumbo store service (REST, demo) |
+| `aggregator-service` | Collects and compares prices from stores (currently Jumbo). Includes clients for store integration. |
+| `price-catalog-service` | Stores and caches fetched prices. Supports H2 for fast testing and PostgreSQL for production. |
+| `list-service` | Manages user shopping lists. Allows adding, removing, and viewing list items. |
+| `api-gateway` | Central entry point for routing requests to internal services. Built with Spring Cloud Gateway. |
+| `common-model` | Shared module containing data models like `ProductDto`, `SearchResponse`, and `PriceBulkRequest`. Used across services. |
 
-
-
-## Prerequisites
-
+---  
+## How to Run the Project
+- Make sure Docker and Docker Compose are installed. Then run:
+ ```bash
+docker-compose up --build
+```
 - JDK 21:
   - `java -version` → 21.x
 - Maven 3.9+:
   - `mvn -v`
-- Docker (for Redis):
-  - `docker run -d --name redis -p 6379:6379 redis:7`
 
 ## Build
 
 From repo root:
 ```bash
 mvn -q -DskipTests clean install
-```
-
-
-# Run (Dev, local)  
-1. Start Redis (once):
-```bash
-docker run -d --name redis -p 6379:6379 redis:7
 ```
 
 2. Start store-jumbo-service: <br> . IntelliJ: Run StoreJumboApplication
@@ -71,12 +70,6 @@ mvn -q -DskipTests spring-boot:run
 cd aggregator-service
 mvn -q -DskipTests spring-boot:run
 # runs on port 8081
-```
-4. Test (MVP)
-   
-```Bash
-# Compare by query using aggregator (will call Jumbo demo)
-curl "http://localhost:8081/v1/compare?query=eieren"
 ```
 
 # Configuration
@@ -96,10 +89,6 @@ server:
 stores:
   jumbo:
     url: http://localhost:8091
-  ah:
-    url: http://localhost:8092  # add when service is ready
-  lidl:
-    url: http://localhost:8093  # add when service is ready
 ```
 store-jumbo-service/src/main/resources/application.yml
 
@@ -140,7 +129,17 @@ stores:
 @FeignClient(name = "storeLidl", url = "${stores.lidl.url}")
 interface StoreLidlClient { @GetMapping("/v1/search") SearchResponse search(@RequestParam String query); }
 ```
-5. Call it in CompareController.
+
+---
+## All services will start automatically. You can access them via:
+| Service	 | URL |
+|--------|----------------|
+| `Prometheus` | 	[http://localhost:9090](http://localhost:9090) |
+| `Grafana` | 	[http://localhost:9090](http://localhost:3000 (user: admin, pass: admin123)) |
+| `Swagger UI (e.g. aggregator)` | 	[http://localhost:9090](http://localhost:<port>/swagger-ui.html) |
+| `H2 Console (for price-catalog-service)` | 	[http://localhost:9090](http://localhost:<port>/h2-console) |
+
+
 
 ## Caching (now) and SWR (next)  
 - Cache key: cmp:{query} (aggregator-service)
@@ -148,10 +147,9 @@ interface StoreLidlClient { @GetMapping("/v1/search") SearchResponse search(@Req
 - Next: SWR (serve stale, refresh in background)  
 
 ## Roadmap  
-- Add stores: AH, Lidl, PLUS, Dirk, Vomar, SPAR, Aldi
+- Add stores: Jumbo
 - API Gateway (Spring Cloud Gateway)
-- Jsoup/JSON real fetch (Jumbo/Lidl/PLUS/…)
-- AH JSON or Headless worker (Playwright), not on request path
+- Jsoup/JSON real fetch (Jumbo)
 - Redis TTL per data type, SWR
 - OCR receipts service (Vision/Tesseract)
 - Smart refill (ML) + Routing service (OSRM/Maps)
@@ -182,13 +180,20 @@ Run Jumbo:
 cd store-jumbo-service && mvn -q -DskipTests spring-boot:run
 ```
 
+##Testing & Exploration
+- price-catalog-service uses H2 for fast local testing
+- Swagger UI is enabled for all services to test endpoints
+- Metrics are visible in Prometheus and visualized in Grafana
+
+
 ## Contributing
 - Java 21, clean code, small PRs.
 - Commit style: feat: ..., fix: ..., docs: ...
 - Branches: feature/*, bugfix/*  
+- This project is published as an educational monorepo to demonstrate microservice architecture and monitoring. It does not include full business logic or production-grade testing
 
 ## License
-MIT (to add)
+- This project is released under the MIT License.
 
 
 
