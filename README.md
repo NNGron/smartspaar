@@ -1,6 +1,8 @@
-# SmartSpaar 🛒
+# SmartSpaar 🛒  
+> A hands-on monorepo for learning microservices, scraping, caching, and observability with Spring Boot.
+**Educational Microservice Project with Monitoring and Jumbo Price Fetching**
 
-Educational Microservice Project with Monitoring and Jumbo Price Fetching SmartSpaar is an educational project built with a modular architecture (monorepo) to demonstrate key concepts in microservices, external data fetching, and professional monitoring systems.
+SmartSpaar is an educational project built with a modular architecture (monorepo) to demonstrate key concepts in microservices, external data fetching, and professional monitoring systems.
  
 Java 21 • Spring Boot 3.3 • Spring Cloud • Redis • Feign • Maven
 
@@ -16,21 +18,21 @@ Java 21 • Spring Boot 3.3 • Spring Cloud • Redis • Feign • Maven
 ---
 ## Tech Stack
 - Java 21 (LTS), Maven
-- Spring Boot 3.3.x, Spring Cloud  later)
+- Spring Boot 3.3.x, Spring Cloud (Gateway, OpenFeign)
+- Redis (as cache)
 - Docker & Docker Compose
 - Prometheus, Grafana
 - PostgreSQL, Redis, Kafka
 - H2 (for dev testing)
 - Spring Cloud Gateway 2023.x (OpenFeign, Gateway)
 - OpenAPI / Swagger
-- Redis (cache), Docker (dev)
 - Jsoup/JSON (scraping/API)
 
 ## Project Structure
 | Module | Responsibility |
 |--------|----------------|
 | `smartspaar` | parent (not a Spring app). |
-| `store-jumbo-service` | Jumbo store service (REST, demo) |
+| `store-jumbo-service` | Fetches product data from Jumbo via scraping or API (demo implementation) |
 | `aggregator-service` | Collects and compares prices from stores (currently Jumbo). Includes clients for store integration. |
 | `price-catalog-service` | Stores and caches fetched prices. Supports H2 for fast testing and PostgreSQL for production. |
 | `list-service` | Manages user shopping lists. Allows adding, removing, and viewing list items. |
@@ -39,6 +41,9 @@ Java 21 • Spring Boot 3.3 • Spring Cloud • Redis • Feign • Maven
 
 ---  
 ## How to Run the Project
+### 🧪 Local Development
+You can run all services via Docker Compose, or start them individually for debugging or development.
+
 - Make sure Docker and Docker Compose are installed. Then run:
  ```bash
 docker-compose up --build
@@ -72,7 +77,7 @@ mvn -q -DskipTests spring-boot:run
 # runs on port 8081
 ```
 
-# Configuration
+## Configuration
 aggregator-service/src/main/resources/application.yml
 ```YAML
 spring:
@@ -97,7 +102,7 @@ server:
   port: 8091
 ```
 
-# API  
+## API  
 - Aggregator  
   .. GET /v1/compare?query={q}  
   .. Response:  
@@ -135,25 +140,53 @@ interface StoreLidlClient { @GetMapping("/v1/search") SearchResponse search(@Req
 | Service	 | URL |
 |--------|----------------|
 | `Prometheus` | 	[http://localhost:9090](http://localhost:9090) |
-| `Grafana` | 	[http://localhost:9090](http://localhost:3000 (user: admin, pass: admin123)) |
-| `Swagger UI (e.g. aggregator)` | 	[http://localhost:9090](http://localhost:<port>/swagger-ui.html) |
-| `H2 Console (for price-catalog-service)` | 	[http://localhost:9090](http://localhost:<port>/h2-console) |
+| `Grafana` | [http://localhost:3000](http://localhost:3000) (user: admin, pass: admin123) |
+| `Swagger UI (e.g. aggregator)` | [http://localhost:8081/swagger-ui.html](http://localhost:8081/swagger-ui.html) |
+| `H2 Console (for price-catalog-service)` | [http://localhost:8082/h2-console](http://localhost:8082/h2-console) |
+
+---
+
+## Monitoring System
+> The monitoring stack is fully auto-provisioned via Docker Compose and ready to use out of the box.
+Prometheus automatically scrapes metrics from exporters defined in `prometheus.yml`. No manual setup required.
 
 
+## Purpose  
+- To monitor the health, performance, and metrics of services, databases, and infrastructure in real time.
+
+## Components
+| Tool	 | Role |
+|--------|----------------|
+| `Prometheus` | 	Collects metrics from services and exporters |
+| `Grafana` | 	Visualizes metrics with customizable dashboards |
+| `Exporters` | 	Provide readable metrics for Prometheus from various sources |
+
+## Exporters Used
+- redis-exporter: Monitors Redis memory and performance
+- postgres-exporter: Tracks PostgreSQL connections, queries, and resource usage
+- kafka-exporter: Monitors Kafka topics, offsets, and lag
+
+## Key Files
+- prometheus.yml: Defines scrape jobs and targets for Prometheus
+- grafana-datasource.yml: Automatically connects Grafana to Prometheus
+- grafana-dashboard.yml: Auto-imports dashboards into Grafana
+- grafana-dashboard.json: Prebuilt dashboard with charts for Redis, PostgreSQL, Kafka, and Prometheus
+
+## Dashboards  
+Grafana includes a dashboard named SmartSpaar Monitoring with:
+- Redis memory usage
+- Active PostgreSQL connections
+- Kafka message rates and lag
+- Prometheus scrape durations
+
+---
 
 ## Caching (now) and SWR (next)  
 - Cache key: cmp:{query} (aggregator-service)
 - TTL: 2h (sample)
 - Next: SWR (serve stale, refresh in background)  
 
-## Roadmap  
-- Add stores: Jumbo
-- API Gateway (Spring Cloud Gateway)
-- Jsoup/JSON real fetch (Jumbo)
-- Redis TTL per data type, SWR
-- OCR receipts service (Vision/Tesseract)
-- Smart refill (ML) + Routing service (OSRM/Maps)
-- Notifications (FCM), Reports (weekly)
+---
 
 ## Dev Tips
 
@@ -180,7 +213,7 @@ Run Jumbo:
 cd store-jumbo-service && mvn -q -DskipTests spring-boot:run
 ```
 
-##Testing & Exploration
+## Testing & Exploration
 - price-catalog-service uses H2 for fast local testing
 - Swagger UI is enabled for all services to test endpoints
 - Metrics are visible in Prometheus and visualized in Grafana
@@ -194,14 +227,3 @@ cd store-jumbo-service && mvn -q -DskipTests spring-boot:run
 
 ## License
 - This project is released under the MIT License.
-
-
-
-
-
-
-
-
-
-
-
