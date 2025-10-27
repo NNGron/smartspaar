@@ -4,8 +4,6 @@
 
 SmartSpaar is an educational project built with a modular architecture (monorepo) to demonstrate key concepts in microservices, external data fetching, and professional monitoring systems.
  
-Java 21 • Spring Boot 3.3 • Spring Cloud • Redis • Feign • Maven
-
 ---
 ## Project Goals
 
