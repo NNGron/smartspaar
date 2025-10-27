@@ -41,7 +41,7 @@ Java 21 • Spring Boot 3.3 • Spring Cloud • Redis • Feign • Maven
 
 ---  
 ## How to Run the Project
-### 🧪 Local Development
+### Local Development
 You can run all services via Docker Compose, or start them individually for debugging or development.
 
 - Make sure Docker and Docker Compose are installed. Then run:
